@@ -1,0 +1,37 @@
+[
+  {
+    "id": "TC01",
+    "type": "direct_query",
+    "question": "Bạn hãy giới thiệu quy trình xử lý một đơn hàng từ lúc tạo đơn đến khi giao hàng.",
+    "expected_behavior": "Agent trả lời trực tiếp về quy trình chung, không cần gọi Tool tra cứu hoặc cập nhật đơn hàng.",
+    "complexity": "Low"
+  },
+  {
+    "id": "TC02",
+    "type": "single_tool_query",
+    "question": "Hãy tra cứu thông tin và vị trí hiện tại của đơn hàng ORD2026001.",
+    "expected_behavior": "Agent gọi Tool 'shipment_query' với mã đơn ORD2026001 và trả về mã vận đơn, trạng thái, kho và vị trí lưu kho.",
+    "complexity": "Medium"
+  },
+  {
+    "id": "TC03",
+    "type": "status_update",
+    "question": "Cập nhật trạng thái đơn hàng ORD2026001 thành Đã giao.",
+    "expected_behavior": "Agent gọi Tool 'update_order_status' với order_id ORD2026001 và new_status 'Đã giao', sau đó xác nhận kết quả cập nhật.",
+    "complexity": "Medium"
+  },
+  {
+    "id": "TC04",
+    "type": "multi_step_reasoning",
+    "question": "Kiểm tra đơn hàng ORD2026002 đang ở kho nào. Nếu đơn vẫn đang Đang đóng gói thì cập nhật trạng thái thành Đang vận chuyển.",
+    "expected_behavior": "Agent thực hiện chuỗi ReAct: gọi 'shipment_query' trước, quan sát trạng thái đơn, sau đó gọi 'update_order_status' nếu điều kiện Đang đóng gói được đáp ứng.",
+    "complexity": "High"
+  },
+  {
+    "id": "TC05",
+    "type": "edge_case_handling",
+    "question": "Hãy tra cứu thông tin đơn hàng ORD9999999.",
+    "expected_behavior": "Agent nhận kết quả NOT_FOUND từ 'shipment_query' và thông báo đơn hàng không tồn tại, không bịa đặt thông tin.",
+    "complexity": "Medium"
+  }
+]

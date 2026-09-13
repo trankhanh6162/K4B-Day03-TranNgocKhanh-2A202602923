@@ -7,45 +7,40 @@ import json
 from typing import Dict, Any
 
 # ==============================================================================
-# 1. KHAI BÁO TOOL SCHEMAS CHUẨN NATIVE JSON SCHEMA (TASK 1.2)
+# 1. KHAI BÁO TOOL SCHEMAS CHUẨN NATIVE JSON SCHEMA
 # ==============================================================================
 
 TOOLS_SCHEMA = [
-    # Tool 1: Đã được định nghĩa mẫu sẵn cho Học viên tham khảo
     {
-        "name": "academic_query",
-        "description": "Tra cứu hồ sơ và thông tin học vụ của sinh viên VinUni bằng mã sinh viên.",
+        "name": "shipment_query",
+        "description": "Tra cứu thông tin đơn hàng, mã vận đơn, trạng thái và vị trí lưu kho.",
         "parameters": {
             "type": "object",
             "properties": {
-                "student_id": {
+                "order_id": {
                     "type": "string",
-                    "description": "Mã sinh viên cần tra cứu (ví dụ: 'SV2026001')"
+                    "description": "Mã đơn hàng cần tra cứu (ví dụ: 'ORD2026001')"
                 }
             },
-            "required": ["student_id"]
+            "required": ["order_id"]
         }
     },
-    
-    # --------------------------------------------------------------------------
-    # TODO 1.2: HỌC VIÊN HOÀN THIỆN TOOL SCHEMA CHO 'schedule_appointment'
-    # 🎯 YÊU CẦU THIẾT KẾ SCHEMA (JSON SCHEMA STANDARD):
-    # 1. Tool dùng để đặt lịch hẹn tư vấn học vụ với Cố vấn học tập VinUni.
-    # 2. Thiết kế các tham số (properties) để LLM trích xuất:
-    #    - student_id (string): Mã sinh viên cần đặt lịch (ví dụ: 'SV2026001')
-    #    - datetime_str (string): Thời gian hẹn (ví dụ: '14:00 15/09/2026')
-    #    - advisor_name (string): Tên cố vấn học tập
-    # 3. Khai báo danh sách các trường bắt buộc (required).
-    # --------------------------------------------------------------------------
     {
-        "name": "schedule_appointment",
-        "description": "Đặt lịch hẹn tư vấn học vụ với Cố vấn học tập VinUni.",
+        "name": "update_order_status",
+        "description": "Cập nhật trạng thái xử lý của một đơn hàng.",
         "parameters": {
             "type": "object",
             "properties": {
-                # TODO 1.2: Khai báo các thuộc tính tham số cho Tool tại đây...
+                "order_id": {
+                    "type": "string",
+                    "description": "Mã đơn hàng cần cập nhật (ví dụ: 'ORD2026001')"
+                },
+                "new_status": {
+                    "type": "string",
+                    "description": "Trạng thái mới của đơn hàng, ví dụ: 'Đang vận chuyển' hoặc 'Đã giao'"
+                }
             },
-            "required": [] # TODO 1.2: Khai báo danh sách các trường bắt buộc tại đây...
+            "required": ["order_id", "new_status"]
         }
     }
 ]
@@ -55,57 +50,82 @@ TOOLS_SCHEMA = [
 # ==============================================================================
 
 MOCK_DATABASE = {
-    "SV2026001": {
-        "full_name": "Nguyễn Văn An",
-        "class": "AI-K4",
-        "gpa": 3.85,
-        "email": "an.nv@vinuni.edu.vn",
-        "status": "Đang học",
-        "advisor": "PGS.TS Nguyễn Văn A"
+    "ORD2026001": {
+        "tracking_code": "VN123456789",
+        "order_status": "Đang vận chuyển",
+        "warehouse": "Kho Hà Nội",
+        "location": "Kệ A-12",
+        "customer": "Nguyễn Văn An",
+        "updated_at": "13/09/2026 09:30"
     },
-    "SV2026002": {
-        "full_name": "Trần Thị Bình",
-        "class": "AI-K4",
-        "gpa": 3.60,
-        "email": "binh.tt@vinuni.edu.vn",
-        "status": "Đang học",
-        "advisor": "TS. Lê Thị B"
+    "ORD2026002": {
+        "tracking_code": "VN987654321",
+        "order_status": "Đang đóng gói",
+        "warehouse": "Kho Hồ Chí Minh",
+        "location": "Kệ C-05",
+        "customer": "Trần Thị Bình",
+        "updated_at": "13/09/2026 10:15"
     }
 }
 
+VALID_ORDER_STATUSES = {
+    "Đã tạo",
+    "Đang xử lý",
+    "Đang đóng gói",
+    "Đang vận chuyển",
+    "Đã giao",
+    "Đã hủy"
+}
 
-def execute_academic_query(student_id: str) -> str:
-    """Thực thi tra cứu học vụ theo mã sinh viên"""
-    student = MOCK_DATABASE.get(student_id.strip().upper())
-    if student:
+
+def execute_shipment_query(order_id: str) -> str:
+    """Tra cứu thông tin đơn hàng theo mã đơn."""
+    normalized_order_id = order_id.strip().upper()
+    order = MOCK_DATABASE.get(normalized_order_id)
+    if order:
         return json.dumps({
             "status": "SUCCESS",
-            "student_id": student_id,
-            "data": student
+            "order_id": normalized_order_id,
+            "data": order
         }, ensure_ascii=False)
-    else:
+    return json.dumps({
+        "status": "NOT_FOUND",
+        "message": f"Không tìm thấy đơn hàng có mã '{order_id}'"
+    }, ensure_ascii=False)
+
+
+def execute_update_order_status(order_id: str, new_status: str) -> str:
+    """Cập nhật trạng thái đơn hàng trong cơ sở dữ liệu mô phỏng."""
+    normalized_order_id = order_id.strip().upper()
+    normalized_status = new_status.strip()
+    order = MOCK_DATABASE.get(normalized_order_id)
+
+    if not order:
         return json.dumps({
             "status": "NOT_FOUND",
-            "message": f"Không tìm thấy dữ liệu sinh viên có mã '{student_id}'"
+            "message": f"Không tìm thấy đơn hàng có mã '{order_id}'"
         }, ensure_ascii=False)
 
+    if normalized_status not in VALID_ORDER_STATUSES:
+        return json.dumps({
+            "status": "INVALID_STATUS",
+            "message": f"Trạng thái '{new_status}' không hợp lệ.",
+            "valid_statuses": sorted(VALID_ORDER_STATUSES)
+        }, ensure_ascii=False)
 
-def execute_schedule_appointment(student_id: str, datetime_str: str, advisor_name: str = "PGS.TS Nguyễn Văn A") -> str:
-    """Thực thi đặt lịch hẹn tư vấn học vụ"""
+    order["order_status"] = normalized_status
     return json.dumps({
         "status": "SUCCESS",
-        "booking_id": f"BK-{student_id}-99",
-        "student_id": student_id,
-        "datetime": datetime_str,
-        "advisor": advisor_name,
-        "message": f"Đặt lịch thành công cho sinh viên {student_id} với {advisor_name} vào lúc {datetime_str}."
+        "order_id": normalized_order_id,
+        "new_status": normalized_status,
+        "message": f"Đã cập nhật đơn hàng {normalized_order_id} sang trạng thái '{normalized_status}'."
     }, ensure_ascii=False)
 
 
 # Router gọi tool thực tế
 TOOL_ROUTER = {
-    "academic_query": execute_academic_query,
-    "schedule_appointment": execute_schedule_appointment
+    "shipment_query": execute_shipment_query,
+    "update_order_status": execute_update_order_status
 }
 
 def dispatch_tool_call(tool_name: str, arguments: Dict[str, Any]) -> str:

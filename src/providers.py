@@ -36,27 +36,42 @@ class MockOfflineProvider(BaseLLMProvider):
 
     def generate_with_tools(self, prompt: str, tools_schema: List[Dict[str, Any]], system_prompt: str = "") -> Dict[str, Any]:
         prompt_lower = prompt.lower()
-        
-        # Mô phỏng nhận diện intent gọi Tool
-        if "sv2026001" in prompt_lower and "đặt lịch" in prompt_lower:
+
+        # Khi app gửi Observation vào prompt, mô phỏng bước quyết định tiếp theo.
+        if "observation" in prompt_lower and "ord2026002" in prompt_lower and "đang đóng gói" in prompt_lower and "đang vận chuyển" in prompt_lower:
             return {
                 "type": "tool_call",
-                "tool_name": "schedule_appointment",
-                "arguments": {"student_id": "SV2026001", "datetime_str": "14:00 15/09/2026", "advisor_name": "PGS.TS Nguyễn Văn A"},
-                "thought": "Người dùng yêu cầu đặt lịch hẹn tư vấn cho sinh viên SV2026001. Tôi sẽ gọi tool schedule_appointment."
+                "tool_name": "update_order_status",
+                "arguments": {"order_id": "ORD2026002", "new_status": "Đang vận chuyển"},
+                "thought": "Đơn ORD2026002 đang đóng gói, đúng điều kiện cập nhật sang Đang vận chuyển."
             }
-        elif "sv2026001" in prompt_lower or "tra cứu" in prompt_lower:
+        if "ord2026001" in prompt_lower and "đã giao" in prompt_lower and "cập nhật" in prompt_lower:
             return {
                 "type": "tool_call",
-                "tool_name": "academic_query",
-                "arguments": {"student_id": "SV2026001"},
-                "thought": "Người dùng muốn tra cứu thông tin học vụ của sinh viên SV2026001. Tôi sẽ gọi tool academic_query."
+                "tool_name": "update_order_status",
+                "arguments": {"order_id": "ORD2026001", "new_status": "Đã giao"},
+                "thought": "Người dùng yêu cầu cập nhật ORD2026001 thành Đã giao. Tôi sẽ gọi update_order_status."
+            }
+        if "ord2026002" in prompt_lower and "tra cứu" in prompt_lower:
+            return {
+                "type": "tool_call",
+                "tool_name": "shipment_query",
+                "arguments": {"order_id": "ORD2026002"},
+                "thought": "Tôi cần tra cứu ORD2026002 trước để kiểm tra điều kiện cập nhật trạng thái."
+            }
+        if "ord2026001" in prompt_lower or "ord2026002" in prompt_lower or "ord9999999" in prompt_lower or "tra cứu" in prompt_lower or "mã vận đơn" in prompt_lower:
+            order_id = "ORD9999999" if "ord9999999" in prompt_lower else ("ORD2026002" if "ord2026002" in prompt_lower else "ORD2026001")
+            return {
+                "type": "tool_call",
+                "tool_name": "shipment_query",
+                "arguments": {"order_id": order_id},
+                "thought": f"Tôi sẽ gọi shipment_query để tra cứu đơn hàng {order_id}."
             }
         else:
             return {
                 "type": "text",
-                "content": f"[Mock Agent Response]: Xin chào! Quy chế học vụ VinUni yêu cầu sinh viên tích lũy tối thiểu 120 tín chỉ và duy trì GPA trên 2.0 để tốt nghiệp.",
-                "thought": "Câu hỏi chung về quy chế học vụ, trả lời trực tiếp không cần gọi Tool."
+                "content": "Quy trình đơn hàng thường gồm: tạo đơn, xử lý, đóng gói, vận chuyển và giao hàng.",
+                "thought": "Câu hỏi chung về quy trình kho vận, trả lời trực tiếp không cần gọi Tool."
             }
 
 
